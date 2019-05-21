@@ -19,7 +19,8 @@ from sklearn.metrics import mean_absolute_error
 # Preda, G (2019). LANL Earthquake EDA and Prediction. Kaggle.
 # Retrieved from: https://www.kaggle.com/gpreda/lanl-earthquake-eda-and-prediction
 
-DATA_DIR = r'd:\#earthquake\data'  # set for local environment
+DATA_DIR = "/workspace/Kaggle/LANL"
+# DATA_DIR = r'd:\#earthquake\data'  # set for local environment
 
 # lightgbm parameters
 params = {'num_leaves': 21,  # reducing to this helped with over fit
@@ -45,18 +46,18 @@ def main():
     tr_rmses = []
     submission = pd.read_csv(os.path.join(DATA_DIR, 'sample_submission.csv'), index_col='seg_id')
 
-    scaled_train_X = pd.read_csv(r'pk8/scaled_train_X_8.csv')
-    df = pd.read_csv(r'pk8/scaled_train_X_8_slope.csv')  # adds in wavelet features
+    scaled_train_X = pd.read_csv(r'scaled_train_X_8.csv')
+    df = pd.read_csv(r'scaled_train_X_8_slope.csv')  # adds in wavelet features
     scaled_train_X = scaled_train_X.join(df)
 
-    scaled_test_X = pd.read_csv(r'pk8/scaled_test_X_8.csv')
-    df = pd.read_csv(r'pk8/scaled_test_X_8_slope.csv')  # adds in wavelet features
+    scaled_test_X = pd.read_csv(r'scaled_test_X_8.csv')
+    df = pd.read_csv(r'scaled_test_X_8_slope.csv')  # adds in wavelet features
     scaled_test_X = scaled_test_X.join(df)
 
     pcol = []
     pcor = []
     pval = []
-    y = pd.read_csv(r'pk8/train_y_8.csv')['time_to_failure'].values
+    y = pd.read_csv(r'train_y_8.csv')['time_to_failure'].values
 
     # use pearson's to eliminate features with suspect correlation - helped kaggle scores
     for col in scaled_train_X.columns:
@@ -78,7 +79,7 @@ def main():
     scaled_train_X.drop(labels=drop_cols, axis=1, inplace=True)
     scaled_test_X.drop(labels=drop_cols, axis=1, inplace=True)
 
-    train_y = pd.read_csv(r'pk8/train_y_8.csv')
+    train_y = pd.read_csv(r'train_y_8.csv')
     predictions = np.zeros(len(scaled_test_X))
     preds_train = np.zeros(len(scaled_train_X))
 

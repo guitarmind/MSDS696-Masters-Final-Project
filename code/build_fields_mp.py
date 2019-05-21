@@ -30,11 +30,15 @@ from sklearn.linear_model import LinearRegression
 
 from tqdm import tqdm
 
+import gc
+gc.enable()
+
 # some of the original functions from Lukayenko throw warnings, time has not permitted exploring a fix
 warnings.filterwarnings("ignore")
 
 # constants
-DATA_DIR = r'd:\#earthquake\data'  # set for local environment
+DATA_DIR = "/workspace/Kaggle/LANL"
+# DATA_DIR = r'd:\#earthquake\data'  # set for local environment
 SIG_LEN = 150000
 NUM_SEG_PER_PROC = 6000
 NUM_THREADS = 6
@@ -456,7 +460,7 @@ def build_fields(proc_id):
         seg_st = int(NUM_SEG_PER_PROC * proc_id)
         train_df = pd.read_csv(os.path.join(DATA_DIR, 'raw_data_%d.csv' % proc_id), dtype={'acoustic_data': np.int16, 'time_to_failure': np.float32})
         len_df = len(train_df.index)
-        start_indices = (np.loadtxt(fname=r'pk8/start_indices_4k.csv', dtype=np.int32, delimiter=','))[:, proc_id]
+        start_indices = (np.loadtxt(fname=r'start_indices_4k.csv', dtype=np.int32, delimiter=','))[:, proc_id]
         train_X = pd.DataFrame(dtype=np.float64)
         train_y = pd.DataFrame(dtype=np.float64, columns=['time_to_failure'])
         t0 = time.time()
@@ -515,10 +519,10 @@ def join_mp_build():
 
     for i in range(1, NUM_THREADS):
         print('working %d' % i)
-        temp = pd.read_csv('train_x_9_%d.csv' % i)
+        temp = pd.read_csv('train_x_8_%d.csv' % i)
         df0 = df0.append(temp)
 
-        temp = pd.read_csv('train_y_9_%d.csv' % i)
+        temp = pd.read_csv('train_y_8_%d.csv' % i)
         df1 = df1.append(temp)
 
     df0.to_csv('train_x_8.csv', index=False)
@@ -537,13 +541,13 @@ def build_test_fields():
     except:
         pass
 
-    submission = pd.read_csv(r'data/sample_submission.csv', index_col='seg_id')
+    submission = pd.read_csv(f'{DATA_DIR}/sample_submission.csv', index_col='seg_id')
     test_X = pd.DataFrame(columns=train_X.columns, dtype=np.float64, index=submission.index)
 
     print('start for loop')
     count = 0
     for seg_id in tqdm(test_X.index):
-        seg = pd.read_csv('data/test/' + seg_id + '.csv')
+        seg = pd.read_csv(f'{DATA_DIR}/test/' + seg_id + '.csv')
         # test_X = create_features_pk_det(seg_id, seg, test_X, 0, 0)
         test_X = create_features(seg_id, seg, test_X, 0, 0)
 
@@ -559,12 +563,12 @@ def scale_fields():
     scales training and test csv files by using the sklearn standard scaler, sets mean to 0 and standard deviation to 1
     :return: None, outputs csv files
     """
-    train_X = pd.read_csv(r'pk8/train_x_8pk_by_idx.csv')
+    train_X = pd.read_csv(r'train_x_8.csv')
     try:
         train_X.drop(labels=['seg_id', 'seg_start', 'seg_end'], axis=1, inplace=True)
     except:
         pass
-    test_X = pd.read_csv(r'pk8/test_x_8pk_by_idx.csv')
+    test_X = pd.read_csv(r'test_x_8.csv')
 
     print('start scaler')
     scaler = StandardScaler()
@@ -572,13 +576,13 @@ def scale_fields():
     scaled_train_X = pd.DataFrame(scaler.transform(train_X), columns=train_X.columns)
     scaled_test_X = pd.DataFrame(scaler.transform(test_X), columns=test_X.columns)
 
-    scaled_train_X.to_csv(r'pk8/scaled_train_X_8pk_by_idx.csv', index=False)
-    scaled_test_X.to_csv(r'pk8/scaled_test_X_8pk_by_idx.csv', index=False)
+    scaled_train_X.to_csv(r'scaled_train_X_8.csv', index=False)
+    scaled_test_X.to_csv(r'scaled_test_X_8.csv', index=False)
 
 
 if __name__ == "__main__":
     """uncomment and run as desired, recommend one at a time as path and file names need to be consistent"""
-    # split_raw_data()
+    split_raw_data()
     # build_rnd_idxs()
     # run_mp_build()
     # join_mp_build()
