@@ -535,7 +535,7 @@ def build_test_fields():
     note: it took 2 days to do create_features_pk_det
     :return: None, outputs csv file
     """
-    train_X = pd.read_csv(r'train_x.csv')
+    train_X = pd.read_csv(r'train_x_8.csv')
     try:
         train_X.drop(labels=['seg_id', 'seg_start', 'seg_end'], axis=1, inplace=True)
     except:
@@ -582,9 +582,9 @@ def scale_fields():
 
 if __name__ == "__main__":
     """uncomment and run as desired, recommend one at a time as path and file names need to be consistent"""
-    split_raw_data()
+    # split_raw_data()
     # build_rnd_idxs()
-    # run_mp_build()
+    run_mp_build()
     # join_mp_build()
 
     # if needed
