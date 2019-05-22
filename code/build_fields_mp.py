@@ -446,7 +446,7 @@ def create_features(seg_id, seg, X, st, end):
     return X
 
 
-def build_fields(proc_id):
+def build_fields(proc_id, mode="basic"):
     """
     builds fields for training and test, calls one or more feature creation functions.
     for 24k samples from 6 processes (6 x 4k) is needs overnight to run create_features(), its a lot of work!
@@ -454,6 +454,10 @@ def build_fields(proc_id):
     :param proc_id: an integer used to identify files saved from different processes
     :return: 1 on success so successes can be counted by multiprocessing callerm, also outputs csv files
     """
+
+    if mode != "basic":
+        print("Wavelet feature extraction for training set ......")
+
     success = 1
     count = 0
     try:
@@ -469,8 +473,12 @@ def build_fields(proc_id):
             end_idx = np.int32(start_idx + 150000)
             print('working: %d, %d, %d to %d of %d' % (proc_id, seg_id, start_idx, end_idx, len_df))
             seg = train_df.iloc[start_idx: end_idx]
-            # train_X = create_features_pk_det(seg_id, seg, train_X, start_idx, end_idx)
-            train_X = create_features(seg_id, seg, train_X, start_idx, end_idx)
+
+            if mode == "basic":
+                train_X = create_features(seg_id, seg, train_X, start_idx, end_idx)
+            else:
+                train_X = create_features_pk_det(seg_id, seg, train_X, start_idx, end_idx)
+
             train_y.loc[seg_id, 'time_to_failure'] = seg['time_to_failure'].values[-1]
 
             if count == 10:
@@ -481,8 +489,12 @@ def build_fields(proc_id):
             count += 1
 
         print('final_save, process id: %d, loop time: %.2f for %d iterations' % (proc_id, time.time() - t0, count))
-        train_X.to_csv('train_x_%d.csv' % proc_id, index=False)
-        train_y.to_csv('train_y_%d.csv' % proc_id, index=False)
+        if mode == "basic":
+            train_X.to_csv('train_x_%d.csv' % proc_id, index=False)
+            train_y.to_csv('train_y_%d.csv' % proc_id, index=False)
+        else:
+            train_X.to_csv('train_x_%d_wavelet.csv' % proc_id, index=False)
+            train_y.to_csv('train_y_%d_wavelet.csv' % proc_id, index=False)
 
     except:
         print(traceback.format_exc())
@@ -491,7 +503,7 @@ def build_fields(proc_id):
     return success  # 1 on success, 0 if fail
 
 
-def run_mp_build():
+def run_mp_build(mode="basic"):
     """
     manager function for a multiprocessing build,
     call this to create statistical features from the 629m sample training signal
@@ -500,7 +512,7 @@ def run_mp_build():
     t0 = time.time()
     num_proc = NUM_THREADS
     pool = mp.Pool(processes=num_proc)
-    results = [pool.apply_async(build_fields, args=(pid, )) for pid in range(6)]
+    results = [pool.apply_async(build_fields, args=(pid, mode)) for pid in range(6)]
     output = [p.get() for p in results]
     num_built = sum(output)
     pool.close()
@@ -509,7 +521,7 @@ def run_mp_build():
     print('Run time: %.2f' % (time.time() - t0))
 
 
-def join_mp_build():
+def join_mp_build(mode="basic"):
     """
     multiprocessing builds create multiple csv files that need to be joined, this function does that
     :return: None, outputs csv files, x for training, y as the training targets
@@ -517,24 +529,41 @@ def join_mp_build():
     df0 = pd.read_csv('train_x_%d.csv' % 0)
     df1 = pd.read_csv('train_y_%d.csv' % 0)
 
-    for i in range(1, NUM_THREADS):
-        print('working %d' % i)
-        temp = pd.read_csv('train_x_8_%d.csv' % i)
-        df0 = df0.append(temp)
+    if mode == "basic":
+        for i in range(1, NUM_THREADS):
+            print('working %d' % i)
+            temp = pd.read_csv('train_x_8_%d.csv' % i)
+            df0 = df0.append(temp)
 
-        temp = pd.read_csv('train_y_8_%d.csv' % i)
-        df1 = df1.append(temp)
+            temp = pd.read_csv('train_y_8_%d.csv' % i)
+            df1 = df1.append(temp)
 
-    df0.to_csv('train_x_8.csv', index=False)
-    df1.to_csv('train_y_8.csv', index=False)
+        df0.to_csv('train_x_8.csv', index=False)
+        df1.to_csv('train_y_8.csv', index=False)
+
+    else:
+        for i in range(1, NUM_THREADS):
+            print('working %d' % i)
+            temp = pd.read_csv('train_x_8_%d_wavelet.csv' % i)
+            df0 = df0.append(temp)
+
+            temp = pd.read_csv('train_y_8_%d_wavelet.csv' % i)
+            df1 = df1.append(temp)
+
+        df0.to_csv('train_x_8_wavelet.csv', index=False)
+        df1.to_csv('train_y_8_wavelet.csv', index=False)
 
 
-def build_test_fields():
+def build_test_fields(mode="basic"):
     """
     Creates statistical features for the Kaggle test segments
     note: it took 2 days to do create_features_pk_det
     :return: None, outputs csv file
     """
+
+    if mode != "basic":
+        print("Wavelet feature extraction for test set ......")
+
     train_X = pd.read_csv(r'train_x_8.csv')
     try:
         train_X.drop(labels=['seg_id', 'seg_start', 'seg_end'], axis=1, inplace=True)
@@ -548,14 +577,19 @@ def build_test_fields():
     count = 0
     for seg_id in tqdm(test_X.index):
         seg = pd.read_csv(f'{DATA_DIR}/test/' + seg_id + '.csv')
-        # test_X = create_features_pk_det(seg_id, seg, test_X, 0, 0)
-        test_X = create_features(seg_id, seg, test_X, 0, 0)
+        if mode == "basic":
+            test_X = create_features(seg_id, seg, test_X, 0, 0)
+        else:
+            test_X = create_features_pk_det(seg_id, seg, test_X, 0, 0)
 
         if count % 100 == 0:
             print('working', seg_id)
         count += 1
 
-    test_X.to_csv('test_x.csv', index=False)
+    if mode == "basic":
+        test_X.to_csv('test_x_8.csv', index=False)
+    else:
+        test_X.to_csv('test_x_8_wavelet.csv', index=False)
 
 
 def scale_fields():
@@ -584,13 +618,18 @@ if __name__ == "__main__":
     """uncomment and run as desired, recommend one at a time as path and file names need to be consistent"""
     # split_raw_data()
     # build_rnd_idxs()
-    run_mp_build()
+    # run_mp_build()
+    run_mp_build("wavelet")
+    # Run time: 15402.57
+    # Done with build_fields_mp.py
     # join_mp_build()
+    # join_mp_build("wavelet")
 
     # if needed
     # join_multiple_builds()
 
     # build_test_fields()
+    # build_test_fields("wavelet")
 
     # scale_fields()
 
