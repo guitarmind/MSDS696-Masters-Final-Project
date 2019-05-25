@@ -483,8 +483,12 @@ def build_fields(proc_id, mode="basic"):
 
             if count == 10:
                 print('saving: %d, %d to %d' % (seg_id, start_idx, end_idx))
-                train_X.to_csv('train_x_8_%d.csv' % proc_id, index=False)
-                train_y.to_csv('train_y_8_%d.csv' % proc_id, index=False)
+                if mode == "basic":
+                    train_X.to_csv('train_x_8_%d.csv' % proc_id, index=False)
+                    train_y.to_csv('train_y_8_%d.csv' % proc_id, index=False)
+                else:
+                    train_X.to_csv('train_x_8_%d_wavelet.csv' % proc_id, index=False)
+                    train_y.to_csv('train_y_8_%d_wavelet.csv' % proc_id, index=False)
 
             count += 1
 
@@ -592,17 +596,23 @@ def build_test_fields(mode="basic"):
         test_X.to_csv('test_x_8_wavelet.csv', index=False)
 
 
-def scale_fields():
+def scale_fields(mode="basic"):
     """
     scales training and test csv files by using the sklearn standard scaler, sets mean to 0 and standard deviation to 1
     :return: None, outputs csv files
     """
-    train_X = pd.read_csv(r'train_x_8.csv')
+    if mode == "basic":
+        train_X = pd.read_csv(r'train_x_8.csv')
+    else:
+        train_X = pd.read_csv(r'train_x_8_wavelet.csv')
     try:
         train_X.drop(labels=['seg_id', 'seg_start', 'seg_end'], axis=1, inplace=True)
     except:
         pass
-    test_X = pd.read_csv(r'test_x_8.csv')
+    if mode == "basic":
+        test_X = pd.read_csv(r'test_x_8.csv')
+    else:
+        test_X = pd.read_csv(r'test_x_8_wavelet.csv')
 
     print('start scaler')
     scaler = StandardScaler()
@@ -610,8 +620,12 @@ def scale_fields():
     scaled_train_X = pd.DataFrame(scaler.transform(train_X), columns=train_X.columns)
     scaled_test_X = pd.DataFrame(scaler.transform(test_X), columns=test_X.columns)
 
-    scaled_train_X.to_csv(r'scaled_train_X_8.csv', index=False)
-    scaled_test_X.to_csv(r'scaled_test_X_8.csv', index=False)
+    if mode == "basic":
+        scaled_train_X.to_csv(r'scaled_train_X_8.csv', index=False)
+        scaled_test_X.to_csv(r'scaled_test_X_8.csv', index=False)
+    else:
+        scaled_train_X.to_csv(r'scaled_train_X_8_wavelet.csv', index=False)
+        scaled_test_X.to_csv(r'scaled_test_X_8_wavelet.csv', index=False)
 
 
 if __name__ == "__main__":
@@ -632,5 +646,6 @@ if __name__ == "__main__":
     # build_test_fields("wavelet")
 
     # scale_fields()
+    # scale_fields("wavelet")
 
     print('Done with build_fields_mp.py')
